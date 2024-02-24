@@ -1,5 +1,6 @@
 import scipy as sci
 import numpy as np
+from paint import paint
 G = 6.67408e-11
 m_nd = 1.989e+30  # kg
 r_nd = 5.326e+12  # m
@@ -23,7 +24,7 @@ r4 = [0, 0, 0]  # 4.xyz
 v1 = [0.02, 0.02, 0.02]  # 1.v.xyz
 v2 = [-0.05, 0, -0.1]  # 2.v.xyz
 v3 = [0, -0.03, 0] # 3.v.xyz
-v4 = [0, 1, 0] # 4.v.xyz
+v4 = [0, 0, 0] # 4.v.xyz
 
 r1 = np.array(r1)
 r2 = np.array(r2)
@@ -65,9 +66,11 @@ def FourBodyEquations(w, t, G, m1, m2, m3):
     dr4bydt = K2 * v4_
 
     # Package the derivatives into one final size-24 array
-    r123_derivs = np.concatenate((dr1bydt, dr2bydt, dr3bydt))
+    r12_derivs = np.concatenate((dr1bydt, dr2bydt))
+    r123_derivs = np.concatenate((r12_derivs, dr3bydt))
     r_derivs = np.concatenate((r123_derivs, dr4bydt))
-    v123_derivs = np.concatenate((dv1bydt, dv2bydt, dv3bydt))
+    v12_derivs = np.concatenate((dv1bydt, dv2bydt))
+    v123_derivs = np.concatenate((v12_derivs, dv3bydt))
     v_derivs = np.concatenate((v123_derivs, dv4bydt))
     derivs = np.concatenate((r_derivs, v_derivs))
     return derivs
@@ -87,3 +90,5 @@ print(r1_sol, end = '\n\n')
 print(r2_sol, end = '\n\n')
 print(r3_sol, end = '\n\n')
 print(r4_sol, end = '\n\n')
+
+paint(r1_sol, r2_sol, r3_sol, r4_sol)
