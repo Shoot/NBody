@@ -3,7 +3,11 @@ import numpy as np
 import pylab as py
 from matplotlib import animation
 
-
+class Body:
+    def __init__(self, m, name):
+        self.m = m
+        self.name = name
+        self.r = np.zeros(2)
 
 def init():
     line1.set_data([], [])
@@ -11,38 +15,13 @@ def init():
     title_text.set_text('')
     return line1,line2,title_text
 
-
-def force_es(r_):
-    F = np.zeros(2)
-    Fmag = GG*Me*Ms/(np.linalg.norm(r_)+1e-20)**2
-    theta = math.atan(np.abs(r_[1])/(np.abs(r_[0])+1e-20))
-    F[0] = Fmag * np.cos(theta)
-    F[1] = Fmag * np.sin(theta)
-    if r_[0] > 0:
-        F[0] = -F[0]
-    if r_[1] > 0:
-        F[1] = -F[1]
-    return F
-
-def force_js(r_):
-    F = np.zeros(2)
-    Fmag = GG*Mj*Ms/(np.linalg.norm(r_)+1e-20)**2
-    theta = math.atan(np.abs(r_[1])/(np.abs(r_[0])+1e-20))
-    F[0] = Fmag * np.cos(theta)
-    F[1] = Fmag * np.sin(theta)
-    if r_[0] > 0:
-        F[0] = -F[0]
-    if r_[1] > 0:
-        F[1] = -F[1]
-    return F
-
-def force_ej(re_,rj_):
+def force_2(b1, b2):
     r_ = np.zeros(2)
     F = np.zeros(2)
-    r_[0] = re_[0] - rj_[0]
-    r_[1] = re_[1] - rj_[1]
-    Fmag = GG*Me*Mj/(np.linalg.norm(r_)+1e-20)**2
-    theta = math.atan(np.abs(r_[1])/(np.abs(r_[0])+1e-20))
+    r_[0] = b1.r[0] - b2.r[0]
+    r_[1] = b1.r[1] - b2.r[1]
+    Fmag = GG * b1.m * b2.m / (np.linalg.norm(r_) + 1e-20) ** 2
+    theta = math.atan(np.abs(r_[1]) / (np.abs(r_[0]) + 1e-20))
     F[0] = Fmag * np.cos(theta)
     F[1] = Fmag * np.sin(theta)
     if r_[0] > 0:
@@ -52,11 +31,14 @@ def force_ej(re_,rj_):
     return F
 
 
-def force(r_,planet_,ro_,vo_):
-    if planet_ == 'earth':
-        return force_es(r_) + force_ej(r_,ro_)
-    if planet_ == 'jupiter':
-        return force_js(r_) - force_ej(r_,ro_)
+def force(planet_):
+    if planet_.name == 'earth':
+        return force_2(planet_, bodies[1]) + force_2(planet_, bodies[2])
+    if planet_.name == 'jupiter':
+        return force_2(planet_, bodies[0]) + force_2(planet_, bodies[2])
+    if planet_.name == 'sun':
+        return force_2(planet_, bodies[0]) + force_2(planet_, bodies[1])
+
 
 
 def dr_dt(t_,r_,v_,planet_,ro_,vo_):
@@ -64,7 +46,7 @@ def dr_dt(t_,r_,v_,planet_,ro_,vo_):
 
 
 def dv_dt(t_,r_,v_,planet_,ro_,vo_):
-    F = force(r_,planet_,ro_,vo_)
+    F = force(planet_)
     y = F/planet_.m
     return y
 
@@ -87,28 +69,7 @@ def RK4Solver(t_,r_,v_,h_,planet,ro,vo):
     z = [y0, y1]
     return z
 
-
-def KineticEnergy(v_):
-    vn = np.linalg.norm(v_)
-    return 0.5*EARTH_MASS*vn**2
-
-def PotentialEnergy(r_):
-    fmag = np.linalg.norm(force_es(r_))
-    rmag = np.linalg.norm(r_)
-    return -fmag*rmag
-
-def AngMomentum(r_,v_):
-    rn = np.linalg.norm(r_)
-    vn = np.linalg.norm(v_)
-    r_ = r_/rn
-    v_ = v_/vn
-    rdotv = r_[0]*v_[0]+r_[1]*v_[1]
-    theta = math.acos(rdotv)
-    return EARTH_MASS*rn*vn*np.sin(theta)
-
-_1 = Body(m=6e24) # Earth
-_2 = Body(m=1.9e27) # Jupiter
-_3 = Body(m=2e30) # Sun
+bodies = [Body(m=6e24, name='earth'), Body(m=1.9e27, name = 'jupiter'), Body(m=2e30, name = 'sun')]
 G = 6.673e-11
 AU_KM = 1.496e11
 EARTH_MASS = 6e24
@@ -123,17 +84,17 @@ t = np.linspace(initial_time,final_time,points)
 time_step = t[2]-t[1] # time step (uniform)
 
 AreaVal = np.zeros(points)
-r = np.zeros([points,2])         # position vector of Earth
-v = np.zeros([points,2])         # velocity vector of Earth
-rj = np.zeros([points,2])        # position vector of Jupiter
-vj = np.zeros([points,2])        # velocity vector of Jupiter
+r1 = np.zeros([points,2])         # position vector of Earth
+v1 = np.zeros([points,2])         # velocity vector of Earth
+r2 = np.zeros([points,2])        # position vector of Jupiter
+v2 = np.zeros([points,2])        # velocity vector of Jupiter
 ri = [1496e8/AU_KM,0]          # initial position of earth
 rji = [5.2,0]               # initial position of Jupiter
 
 
 
 
-vv = np.sqrt(Ms*GG/ri[0])         # Magnitude of Earth's initial velocity
+vv = np.sqrt(2e30*GG/ri[0])         # Magnitude of Earth's initial velocity
 
 vvj = 13.06e3 * YEAR_SEC/AU_KM             # Magnitude of Jupiter's initial velocity
 
@@ -144,25 +105,24 @@ vji = [0, vvj*1.0]                # Initial velocity vector for Jupiter
 
 
 t[0] = initial_time
-r[0,:] = ri
-v[0,:] = vi
-rj[0,:] = rji
-vj[0,:] = vji
+r1[0,:] = ri
+v1[0,:] = vi
+r2[0,:] = rji
+v2[0,:] = vji
 
 
 
 for i in range(0,points-1):
-    r[i+1,:],v[i+1,:]=RK4Solver(t[i],r[i,:],v[i,:],time_step,'earth',rj[i,:],vj[i,:])
-    rj[i+1,:],vj[i+1,:]=RK4Solver(t[i],rj[i,:],vj[i,:],time_step,'jupiter',r[i,:],v[i,:])
-
+    r1[i+1,:],v1[i+1,:]=RK4Solver(t[i],r1[i,:],v1[i,:],time_step,bodies[0],r2[i,:],v2[i,:])
+    r2[i+1,:],v2[i+1,:]=RK4Solver(t[i],r2[i,:],v2[i,:],time_step,bodies[1],r1[i,:],v1[i,:])
 
 
 def animate(i_):
     earth_trail = 200
     jupiter_trail = 200
     title_text.set_text(f'Прошло {t[i_] : .2} лет')
-    line1.set_data(r[i_:max(1,i_-earth_trail):-1,0], r[i_:max(1,i_-earth_trail):-1,1])
-    line2.set_data(rj[i_:max(1,i_-jupiter_trail):-1,0], rj[i_:max(1,i_-jupiter_trail):-1,1])
+    line1.set_data(r1[i_:max(1,i_-earth_trail):-1,0], r1[i_:max(1,i_-earth_trail):-1,1])
+    line2.set_data(r2[i_:max(1,i_-jupiter_trail):-1,0], r2[i_:max(1,i_-jupiter_trail):-1,1])
     return line1,line2
 
 
